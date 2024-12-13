@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # --- Optional settings used to tweak the code. ---
 
     # AWS SageMaker
-    HF_MODEL_ID: str = "mlabonne/TwinLlama-3.1-8B-DPO"
+    HF_MODEL_ID: str = "aczire/TwinLlama-3.1-8B-DPO"
     GPU_INSTANCE_TYPE: str = "ml.g5.2xlarge"
     SM_NUM_GPUS: int = 1
     MAX_INPUT_LENGTH: int = 2048
@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     # LinkedIn Credentials
     LINKEDIN_USERNAME: str | None = None
     LINKEDIN_PASSWORD: str | None = None
+
+    # ZenML Config
+    ZENML_STORE_URL: str | None = None
+    ZENML_STORE_API_KEY: str | None = None
+
 
     @property
     def OPENAI_MAX_TOKEN_WINDOW(self) -> int:

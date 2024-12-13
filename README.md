@@ -198,7 +198,7 @@ poetry shell
 2. Run project commands using Poe the Poet:
 
 ```bash
-poetry poe ...
+poe ...
 ```
 
 <details>
@@ -214,7 +214,7 @@ If you're experiencing issues with `poethepoet`, you can still run the project c
 #### Example:
 Instead of:
 ```bash
-poetry poe local-infrastructure-up
+poe local-infrastructure-up
 ```
 Use the direct command from pyproject.toml:
 ```bash
@@ -318,19 +318,25 @@ cat ~/.aws/credentials
 
 ### Local infrastructure (for testing and development)
 
-When running the project locally, we host a MongoDB and Qdrant database using Docker. Also, a testing ZenML server is made available through their Python package.
+When running the project locally, we host a MongoDB, ZenML and Qdrant database using Docker. Also, a testing ZenML server is made available through their Python package.
 
 > [!WARNING]
 > You need Docker installed (>= v27.1.1)
 
 For ease of use, you can start the whole local development infrastructure with the following command:
 ```bash
-poetry poe local-infrastructure-up
+poe local-infrastructure-up
+```
+
+#### Login to ZenML
+ZenML local background service is not supported on all platforms. So we use a dockerized ZenML Server. For the APIs to use this local ZenML server you need to login to it first. This will initialize the local credentials, enabling further direct connectivity to the server.
+```bash
+zenml login http://localhost:8080
 ```
 
 Also, you can stop the ZenML server and all the Docker containers using the following command:
 ```bash
-poetry poe local-infrastructure-down
+poe local-infrastructure-down
 ```
 
 > [!WARNING]  
@@ -341,7 +347,7 @@ poetry poe local-infrastructure-down
 
 Start the inference real-time RESTful API:
 ```bash
-poetry poe run-inference-ml-service
+poe run-inference-ml-service
 ```
 
 > [!IMPORTANT]
@@ -349,11 +355,9 @@ poetry poe run-inference-ml-service
 
 #### ZenML
 
-Dashboard URL: `localhost:8237`
+Dashboard URL: `localhost:8080`
 
-Default credentials:
-  - `username`: default
-  - `password`: 
+Navigate to the dashboard url and initialize the username and password.
 
 → Find out more about using and setting up [ZenML](https://docs.zenml.io/).
 
@@ -400,29 +404,70 @@ By this point, we expect you to have AWS CLI installed and your AWS CLI and proj
 
 To ensure best practices, we must create a new AWS user restricted to creating and deleting only resources related to AWS SageMaker. Create it by running:
 ```bash
-poetry poe create-sagemaker-role
+poe create-sagemaker-role
 ```
 It will create a `sagemaker_user_credentials.json` file at the root of your repository with your new `AWS_ACCESS_KEY` and `AWS_SECRET_KEY` values. **But before replacing your new AWS credentials, also run the following command to create the execution role (to create it using your admin credentials).**
 
 To create the IAM execution role used by AWS SageMaker to access other AWS resources on our behalf, run the following:
 ```bash
-poetry poe create-sagemaker-execution-role
+poe create-sagemaker-execution-role
 ```
 It will create a `sagemaker_execution_role.json` file at the root of your repository with your new `AWS_ARN_ROLE` value. Add it to your `.env` file. 
 
 Once you've updated the `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, and `AWS_ARN_ROLE` values in your `.env` file, you can use AWS SageMaker. **Note that this step is crucial to complete the AWS setup.**
 
+#### AWS ECR
+
+Ensure you have created the ECR images that we want to run in sagemaker. To build local container, run following:
+
+```bash
+poe build-docker-image
+```
+Once you have the container, tag it so that we can push it to our favourite container repositories.
+```bash
+docker tag llmtwin aczire/llmtwin:latest
+```
+Confirm te image in our local image list by running:
+```bash
+docker image list
+```
+
+Now login to AWS Console. Navigate to ECR and create a repository. As an example, I created the repository named `aczire/llmtwin`.
+Once the ECR repository is created you can navigate to the repository dashboard to get its URI. For example, my repo URI is, `970547382716.dkr.ecr.us-east-1.amazonaws.com/aczire/llmtwin`.
+
+Now its the time to push the image to ECR. Inorder to push the container image to ECR we need to first login to the repo by running the following:
+```bash
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 970547382716.dkr.ecr.us-east-1.amazonaws.com
+```
+Now tag the image for the repo,
+```bash
+docker tag aczire/llmtwin:latest 970547382716.dkr.ecr.us-east-1.amazonaws.com/aczire/llmtwin:latest
+```
+Finally, push it to the repo,
+```bash
+docker push 970547382716.dkr.ecr.us-east-1.amazonaws.com/aczire/llmtwin:latest
+```
+Alternatively, if you are collaborating with someone but he doesnt have access to the AWS account, you can use DockerHub to share the image.
+First navigate to `https://hub.docker.com/` and create a repository. For example, I created `llmtwin`. Now login to DockerHub in console by running the following:
+```bash
+docker login
+```
+Once you have successfully logged into the DockerHub in your console, you can pus the image to DockerHub by running the following:
+```bash
+docker push aczire/llmtwin:latest
+```
+
 #### Training
 
 We start the training pipeline through ZenML by running the following:
 ```bash
-poetry poe run-training-pipeline
+poe run-training-pipeline
 ```
 This will start the training code using the configs from `configs/training.yaml` directly in SageMaker. You can visualize the results in Comet ML's dashboard.
 
 We start the evaluation pipeline through ZenML by running the following:
 ```bash
-poetry poe run-evaluation-pipeline
+poe run-evaluation-pipeline
 ```
 This will start the evaluation code using the configs from `configs/evaluating.yaml` directly in SageMaker. You can visualize the results in `*-results` datasets saved to your Hugging Face profile.
 
@@ -430,15 +475,15 @@ This will start the evaluation code using the configs from `configs/evaluating.y
 
 To create an AWS SageMaker Inference Endpoint, run:
 ```bash
-poetry poe deploy-inference-endpoint
+poe deploy-inference-endpoint
 ```
 To test it out, run:
 ```bash
-poetry poe test-sagemaker-endpoint
+poe test-sagemaker-endpoint
 ```
 To delete it, run:
 ```bash
-poetry poe delete-inference-endpoint
+poe delete-inference-endpoint
 ```
 
 #### AWS: ML pipelines, artifacts, and containers
@@ -484,11 +529,11 @@ Now, let's explore all the pipelines you can run. From data collection to traini
 
 Run the data collection ETL:
 ```bash
-poetry poe run-digital-data-etl
+poe run-digital-data-etl
 ```
 
 > [!WARNING]
-> You must have Chrome (or another Chromium-based browser) installed on your system for LinkedIn and Medium crawlers to work (which use Selenium under the hood). Based on your Chrome version, the Chromedriver will be automatically installed to enable Selenium support. Another option is to run everything using our Docker image if you don't want to install Chrome. For example, to run all the pipelines combined you can run `poetry poe run-docker-end-to-end-data-pipeline`. Note that the command can be tweaked to support any other pipeline.
+> You must have Chrome (or another Chromium-based browser) installed on your system for LinkedIn and Medium crawlers to work (which use Selenium under the hood). Based on your Chrome version, the Chromedriver will be automatically installed to enable Selenium support. Another option is to run everything using our Docker image if you don't want to install Chrome. For example, to run all the pipelines combined you can run `poe run-docker-end-to-end-data-pipeline`. Note that the command can be tweaked to support any other pipeline.
 >
 > If, for any other reason, you don't have a Chromium-based browser installed and don't want to use Docker, you have two other options to bypass this Selenium issue:
 > - Comment out all the code related to Selenium, Chrome and all the links that use Selenium to crawl them (e.g., Medium), such as the `chromedriver_autoinstaller.install()` command from [application.crawlers.base](https://github.com/PacktPublishing/LLM-Engineers-Handbook/blob/main/llm_engineering/application/crawlers/base.py) and other static calls that check for Chrome drivers and Selenium.
@@ -498,39 +543,39 @@ To add additional links to collect from, go to `configs/digital_data_etl_[author
 
 Run the feature engineering pipeline:
 ```bash
-poetry poe run-feature-engineering-pipeline
+poe run-feature-engineering-pipeline
 ```
 
 Generate the instruct dataset:
 ```bash
-poetry poe run-generate-instruct-datasets-pipeline
+poe run-generate-instruct-datasets-pipeline
 ```
 
 Generate the preference dataset:
 ```bash
-poetry poe run-generate-preference-datasets-pipeline
+poe run-generate-preference-datasets-pipeline
 ```
 
 Run all of the above compressed into a single pipeline:
 ```bash
-poetry poe run-end-to-end-data-pipeline
+poe run-end-to-end-data-pipeline
 ```
 
 ### Utility pipelines
 
 Export the data from the data warehouse to JSON files:
 ```bash
-poetry poe run-export-data-warehouse-to-json
+poe run-export-data-warehouse-to-json
 ```
 
 Import data to the data warehouse from JSON files (by default, it imports the data from the `data/data_warehouse_raw_data` directory):
 ```bash
-poetry poe run-import-data-warehouse-from-json
+poe run-import-data-warehouse-from-json
 ```
 
 Export ZenML artifacts to JSON:
 ```bash
-poetry poe run-export-artifact-to-json-pipeline
+poe run-export-artifact-to-json-pipeline
 ```
 
 This will export the following ZenML artifacts to the `output` folder as JSON files (it will take their latest version):
@@ -545,12 +590,12 @@ You can configure what artifacts to export by tweaking the `configs/export_artif
 
 Run the training pipeline:
 ```bash
-poetry poe run-training-pipeline
+poe run-training-pipeline
 ```
 
 Run the evaluation pipeline:
 ```bash
-poetry poe run-evaluation-pipeline
+poe run-evaluation-pipeline
 ```
 
 > [!WARNING]
@@ -560,17 +605,17 @@ poetry poe run-evaluation-pipeline
 
 Call the RAG retrieval module with a test query:
 ```bash
-poetry poe call-rag-retrieval-module
+poe call-rag-retrieval-module
 ```
 
 Start the inference real-time RESTful API:
 ```bash
-poetry poe run-inference-ml-service
+poe run-inference-ml-service
 ```
 
 Call the inference real-time RESTful API with a test query:
 ```bash
-poetry poe call-inference-ml-service
+poe call-inference-ml-service
 ```
 
 Remember that you can monitor the prompt traces on [Opik](https://www.comet.com/opik).
@@ -582,26 +627,26 @@ Remember that you can monitor the prompt traces on [Opik](https://www.comet.com/
 
 Check or fix your linting issues:
 ```bash
-poetry poe lint-check
-poetry poe lint-fix
+poe lint-check
+poe lint-fix
 ```
 
 Check or fix your formatting issues:
 ```bash
-poetry poe format-check
-poetry poe format-fix
+poe format-check
+poe format-fix
 ```
 
 Check the code for leaked credentials:
 ```bash
-poetry poe gitleaks-check
+poe gitleaks-check
 ```
 
 ### Tests
 
 Run all the tests using the following command:
 ```bash
-poetry poe test
+poe test
 ```
 
 ## 🏃 Run project
@@ -610,39 +655,39 @@ Based on the setup and usage steps described above, assuming the local and cloud
 
 ### Data
 
-1. Collect data: `poetry poe run-digital-data-etl`
+1. Collect data: `poe run-digital-data-etl`
 
-2. Compute features: `poetry poe run-feature-engineering-pipeline`
+2. Compute features: `poe run-feature-engineering-pipeline`
 
-3. Compute instruct dataset: `poetry poe run-generate-instruct-datasets-pipeline`
+3. Compute instruct dataset: `poe run-generate-instruct-datasets-pipeline`
 
-4. Compute preference alignment dataset: `poetry poe run-generate-preference-datasets-pipeline`
+4. Compute preference alignment dataset: `poe run-generate-preference-datasets-pipeline`
 
 ### Training
 
 > [!IMPORTANT]
 > From now on, for these steps to work, you need to properly set up AWS SageMaker, such as running `poetry install --with aws` and filling in the AWS-related environment variables and configs.
 
-5. SFT fine-tuning Llamma 3.1: `poetry poe run-training-pipeline`
+5. SFT fine-tuning Llamma 3.1: `poe run-training-pipeline`
 
-6. For DPO, go to `configs/training.yaml`, change `finetuning_type` to `dpo`, and run `poetry poe run-training-pipeline` again
+6. For DPO, go to `configs/training.yaml`, change `finetuning_type` to `dpo`, and run `poe run-training-pipeline` again
 
-7. Evaluate fine-tuned models: `poetry poe run-evaluation-pipeline`
+7. Evaluate fine-tuned models: `poe run-evaluation-pipeline`
 
 ### Inference
 
 > [!IMPORTANT]
 > From now on, for these steps to work, you need to properly set up AWS SageMaker, such as running `poetry install --with aws` and filling in the AWS-related environment variables and configs.
 
-8. Call only the RAG retrieval module: `poetry poe call-rag-retrieval-module`
+8. Call only the RAG retrieval module: `poe call-rag-retrieval-module`
 
-9. Deploy the LLM Twin microservice to SageMaker: `poetry poe deploy-inference-endpoint`
+9. Deploy the LLM Twin microservice to SageMaker: `poe deploy-inference-endpoint`
 
-10. Test the LLM Twin microservice: `poetry poe test-sagemaker-endpoint`
+10. Test the LLM Twin microservice: `poe test-sagemaker-endpoint`
 
-11. Start end-to-end RAG server: `poetry poe run-inference-ml-service`
+11. Start end-to-end RAG server: `poe run-inference-ml-service`
 
-12. Test RAG server: `poetry poe call-inference-ml-service`
+12. Test RAG server: `poe call-inference-ml-service`
 
 ## 📄 License
 

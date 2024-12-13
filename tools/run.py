@@ -5,15 +5,9 @@ import click
 from loguru import logger
 
 from llm_engineering import settings
-from pipelines import (
-    digital_data_etl,
-    end_to_end_data,
-    evaluating,
-    export_artifact_to_json,
-    feature_engineering,
-    generate_datasets,
-    training,
-)
+from pipelines import (digital_data_etl, end_to_end_data, evaluating,
+                       export_artifact_to_json, feature_engineering,
+                       generate_datasets, training)
 
 
 @click.command(
@@ -48,7 +42,7 @@ Examples:
 @click.option(
     "--no-cache",
     is_flag=True,
-    default=False,
+    default=True,
     help="Disable caching for the pipeline run.",
 )
 @click.option(
@@ -138,9 +132,9 @@ def main(
     if export_settings:
         logger.info("Exporting settings to ZenML secrets.")
         settings.export()
-
+    enable_cache = not no_cache
     pipeline_args = {
-        "enable_cache": not no_cache,
+        "enable_cache": enable_cache,
     }
     root_dir = Path(__file__).resolve().parent.parent
 

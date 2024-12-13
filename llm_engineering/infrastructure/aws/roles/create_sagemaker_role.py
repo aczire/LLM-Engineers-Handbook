@@ -52,7 +52,7 @@ def create_sagemaker_user(username: str):
 if __name__ == "__main__":
     new_user = create_sagemaker_user("sagemaker-deployer")
 
-    with Path("sagemaker_user_credentials.json").open("w") as f:
+    with Path("sagemaker_user_credentials.json").open("w", encoding="utf-8") as f:
         json.dump(new_user, f)
 
 logger.info("Credentials saved to 'sagemaker_user_credentials.json'")

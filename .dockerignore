@@ -1,0 +1,19 @@
+# Ignore everything
+*
+
+# Allow files and directories
+!/code_snippets
+!/configs
+!/llm_engineering
+!/pipelines
+!/steps
+!/tools
+!/poetry.lock
+!/pyproject.toml
+!/.venv
+
+# Ignore unnecessary files inside allowed directories
+# This should go after the allowed directories
+**/*~
+**/.*
+**/__pycache__

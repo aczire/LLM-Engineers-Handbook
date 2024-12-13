@@ -1,6 +1,7 @@
 from zenml import step
 
-from llm_engineering.model.finetuning.sagemaker import run_finetuning_on_sagemaker
+from llm_engineering.model.finetuning.sagemaker import \
+    run_finetuning_on_sagemaker
 
 
 @step
@@ -9,7 +10,7 @@ def train(
     num_train_epochs: int,
     per_device_train_batch_size: int,
     learning_rate: float,
-    dataset_huggingface_workspace: str = "mlabonne",
+    dataset_huggingface_workspace: str = "aczire",
     is_dummy: bool = False,
 ) -> None:
     run_finetuning_on_sagemaker(
