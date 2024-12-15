@@ -4,6 +4,8 @@ from huggingface_hub import HfApi
 from loguru import logger
 
 try:
+    import boto3
+    import sagemaker
     from sagemaker.huggingface import HuggingFaceProcessor
 except ModuleNotFoundError:
     logger.warning("Couldn't load SageMaker imports. Run 'poetry install --with aws' to support AWS.")
@@ -18,6 +20,9 @@ def run_evaluation_on_sagemaker(is_dummy: bool = True) -> None:
     assert settings.HUGGINGFACE_ACCESS_TOKEN, "Hugging Face access token is required."
     assert settings.OPENAI_API_KEY, "OpenAI API key is required."
     assert settings.AWS_ARN_ROLE, "AWS ARN role is required."
+    assert settings.AWS_REGION, "AWS_REGION is not set."
+    assert settings.AWS_ACCESS_KEY, "AWS_ACCESS_KEY is not set."
+    assert settings.AWS_SECRET_KEY, "AWS_SECRET_KEY is not set."
 
     if not evaluation_dir.exists():
         raise FileNotFoundError(f"The directory {evaluation_dir} does not exist.")
@@ -38,9 +43,20 @@ def run_evaluation_on_sagemaker(is_dummy: bool = True) -> None:
     if is_dummy:
         env["IS_DUMMY"] = "True"
 
+    # Create a boto3 session with the specified credentials
+    boto_session = boto3.Session(
+    aws_access_key_id=settings.AWS_ACCESS_KEY,
+    aws_secret_access_key=settings.AWS_SECRET_KEY,
+    region_name=settings.AWS_REGION
+    )
+
+    # Create the SageMaker session
+    sagemaker_session = sagemaker.Session(boto_session=boto_session)
+
     # Initialize the HuggingFaceProcessor
     hfp = HuggingFaceProcessor(
         role=settings.AWS_ARN_ROLE,
+        sagemaker_session=sagemaker_session,
         instance_count=1,
         instance_type="ml.g5.2xlarge",
         transformers_version="4.36",

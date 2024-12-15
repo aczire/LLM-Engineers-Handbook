@@ -5,10 +5,14 @@ from loguru import logger
 
 try:
     import boto3
+    import sagemaker
     from sagemaker.enums import EndpointType
     from sagemaker.huggingface import HuggingFaceModel
+    from sagemaker.session import Session
 except ModuleNotFoundError:
-    logger.warning("Couldn't load AWS or SageMaker imports. Run 'poetry install --with aws' to support AWS.")
+    logger.warning(
+        "Couldn't load AWS or SageMaker imports. Run 'poetry install --with aws' to support AWS."
+    )
 
 from llm_engineering.domain.inference import DeploymentStrategy
 from llm_engineering.settings import settings
@@ -87,6 +91,15 @@ class DeploymentService:
             aws_access_key_id=settings.AWS_ACCESS_KEY,
             aws_secret_access_key=settings.AWS_SECRET_KEY,
         )
+        # Create a boto3 session with the specified credentials
+        boto_session = boto3.Session(
+            aws_access_key_id=settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_KEY,
+            region_name=settings.AWS_REGION,
+        )
+
+        # Create the SageMaker session
+        self.sagemaker_session = sagemaker.Session(boto_session=boto_session)
         self.resource_manager = resource_manager
 
     def deploy(
@@ -117,10 +130,16 @@ class DeploymentService:
 
         try:
             # Check if the endpoint configuration exists
-            if self.resource_manager.endpoint_config_exists(endpoint_config_name=endpoint_config_name):
-                logger.info(f"Endpoint configuration {endpoint_config_name} exists. Using existing configuration...")
+            if self.resource_manager.endpoint_config_exists(
+                endpoint_config_name=endpoint_config_name
+            ):
+                logger.info(
+                    f"Endpoint configuration {endpoint_config_name} exists. Using existing configuration..."
+                )
             else:
-                logger.info(f"Endpoint configuration{endpoint_config_name} does not exist.")
+                logger.info(
+                    f"Endpoint configuration{endpoint_config_name} does not exist."
+                )
 
             # Prepare and deploy the HuggingFace model
             self.prepare_and_deploy_model(
@@ -132,9 +151,12 @@ class DeploymentService:
                 resources=resources,
                 endpoint_type=endpoint_type,
                 gpu_instance_type=gpu_instance_type,
+                session=self.sagemaker_session,
             )
 
-            logger.info(f"Successfully deployed/updated model to endpoint {endpoint_name}.")
+            logger.info(
+                f"Successfully deployed/updated model to endpoint {endpoint_name}."
+            )
         except Exception as e:
             logger.error(f"Failed to deploy model to SageMaker: {e}")
 
@@ -150,6 +172,7 @@ class DeploymentService:
         gpu_instance_type: str,
         resources: Optional[dict] = None,
         endpoint_type: enum.Enum = EndpointType.MODEL_BASED,
+        session: Optional[Session] = None,
     ) -> None:
         """
         Prepares and deploys/updates the HuggingFace model on SageMaker.
@@ -169,6 +192,7 @@ class DeploymentService:
             role=role_arn,
             image_uri=llm_image,
             env=config,
+            sagemaker_session=session,
         )
 
         # Deploy or update the model based on the endpoint existence

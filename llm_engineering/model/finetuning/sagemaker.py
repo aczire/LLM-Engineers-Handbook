@@ -4,6 +4,8 @@ from huggingface_hub import HfApi
 from loguru import logger
 
 try:
+    import boto3
+    import sagemaker
     from sagemaker.huggingface import HuggingFace
 except ModuleNotFoundError:
     logger.warning("Couldn't load SageMaker imports. Run 'poetry install --with aws' to support AWS.")
@@ -24,6 +26,9 @@ def run_finetuning_on_sagemaker(
 ) -> None:
     assert settings.HUGGINGFACE_ACCESS_TOKEN, "Hugging Face access token is required."
     assert settings.AWS_ARN_ROLE, "AWS ARN role is required."
+    assert settings.AWS_REGION, "AWS_REGION is not set."
+    assert settings.AWS_ACCESS_KEY, "AWS_ACCESS_KEY is not set."
+    assert settings.AWS_SECRET_KEY, "AWS_SECRET_KEY is not set."
 
     if not finetuning_dir.exists():
         raise FileNotFoundError(f"The directory {finetuning_dir} does not exist.")
@@ -46,6 +51,16 @@ def run_finetuning_on_sagemaker(
     if is_dummy:
         hyperparameters["is_dummy"] = True
 
+    # Create a boto3 session with the specified credentials
+    boto_session = boto3.Session(
+    aws_access_key_id=settings.AWS_ACCESS_KEY,
+    aws_secret_access_key=settings.AWS_SECRET_KEY,
+    region_name=settings.AWS_REGION
+    )
+
+    # Create the SageMaker session
+    sagemaker_session = sagemaker.Session(boto_session=boto_session)
+
     # Create the HuggingFace SageMaker estimator
     huggingface_estimator = HuggingFace(
         entry_point="finetune.py",
@@ -53,6 +68,7 @@ def run_finetuning_on_sagemaker(
         instance_type="ml.g5.2xlarge",
         instance_count=1,
         role=settings.AWS_ARN_ROLE,
+        sagemaker_session=sagemaker_session,
         transformers_version="4.36",
         pytorch_version="2.1",
         py_version="py310",

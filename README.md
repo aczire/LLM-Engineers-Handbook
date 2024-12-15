@@ -299,7 +299,7 @@ For your AWS set-up to work correctly, you need the AWS CLI installed on your lo
 
 Chapter 2 provides step-by-step instructions on how to install the AWS CLI, create an admin user on AWS, and get an access key to set up the `AWS_ACCESS_KEY` and `AWS_SECRET_KEY` environment variables. If you already have an AWS admin user in place, you have to configure the following env vars in your `.env` file:
 
-```bash
+```env
 AWS_REGION=eu-central-1 # Change it with your AWS region.
 AWS_ACCESS_KEY=your_aws_access_key
 AWS_SECRET_KEY=your_aws_secret_key
@@ -328,8 +328,9 @@ For ease of use, you can start the whole local development infrastructure with t
 poe local-infrastructure-up
 ```
 
-#### Login to ZenML
-ZenML local background service is not supported on all platforms. So we use a dockerized ZenML Server. For the APIs to use this local ZenML server you need to login to it first. This will initialize the local credentials, enabling further direct connectivity to the server.
+#### ZenML
+ZenML is an extensible, open-source MLOps framework for creating portable, production-ready machine learning pipelines. Since local background service is not supported on all platforms, we use a dockerized ZenML Server for our application. 
+Once you have the ZenML container up and running in your local machine, for the APIs to use this local ZenML server you need to login to it first. This will initialize the local credentials, enabling further direct connectivity to the server.
 ```bash
 zenml login http://localhost:8080
 ```
@@ -338,6 +339,22 @@ Also, you can stop the ZenML server and all the Docker containers using the foll
 ```bash
 poe local-infrastructure-down
 ```
+For the cloud run, we use ZenML Pro, which is the cloud based service. In order to connect to it, you need to create the authorization keys first.
+For more details, [checkout this documentation](https://docs.zenml.io/how-to/manage-zenml-server/connecting-to-zenml/connect-with-a-service-account)
+```bash
+zenml disconnect
+zenml login
+zenml service-account create llmtwin
+zenml service-account list
+zenml service-account api-key llmtwin list
+```
+
+Once you have the API Key, make sure to update the same in your .env or environment variables.
+```env
+ZENML_STORE_URL=https://xxxx-zenml.cloudinfra.zenml.io
+ZENML_STORE_API_KEY=<API_KEY>
+```
+
 
 > [!WARNING]  
 > When running on MacOS, before starting the server, export the following environment variable:

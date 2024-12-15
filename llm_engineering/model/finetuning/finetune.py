@@ -86,7 +86,7 @@ def finetune(
     if is_dummy is True:
         num_train_epochs = 1
         print(f"Training in dummy mode. Setting num_train_epochs to '{num_train_epochs}'")  # noqa
-        print(f"Training in dummy mode. Reducing dataset size to '400'.")  # noqa
+        print("Training in dummy mode. Reducing dataset size to '400'.")  # noqa
 
     if finetuning_type == "sft":
 
@@ -99,7 +99,8 @@ def finetune(
             return {"text": text}
 
         dataset1 = load_dataset(f"{dataset_huggingface_workspace}/llmtwin", split="train")
-        dataset2 = load_dataset("mlabonne/FineTome-Alpaca-100k", split="train[:10000]")
+        # https://huggingface.co/spaces/huggingface-projects/repo_duplicator to duplicate the dataset
+        dataset2 = load_dataset("aczire/FineTome-Alpaca-100k", split="train[:10000]")
         dataset = concatenate_datasets([dataset1, dataset2])
         if is_dummy:
             try:
@@ -155,7 +156,7 @@ def finetune(
         if is_dummy:
             try:
                 dataset = dataset.select(range(400))
-            except Exception:
+            except Exception: # noqa
                 print("Dummy mode active. Failed to trim the dataset to 400 samples.")  # noqa
         print(f"Loaded dataset with {len(dataset)} samples.")  # noqa
 
@@ -223,7 +224,7 @@ def save_model(model: Any, tokenizer: Any, output_dir: str, push_to_hub: bool = 
         model.push_to_hub_merged(repo_id, tokenizer, save_method="merged_16bit")
 
 
-def check_if_huggingface_model_exists(model_id: str, default_value: str = "mlabonne/TwinLlama-3.1-8B") -> str:
+def check_if_huggingface_model_exists(model_id: str, default_value: str = "aczire/TwinLlama-3.1-8B") -> str:
     api = HfApi()
 
     try:
@@ -243,8 +244,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_train_epochs", type=int, default=3)
     parser.add_argument("--per_device_train_batch_size", type=int, default=2)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
-    parser.add_argument("--dataset_huggingface_workspace", type=str, default="mlabonne")
-    parser.add_argument("--model_output_huggingface_workspace", type=str, default="mlabonne")
+    parser.add_argument("--dataset_huggingface_workspace", type=str, default="aczire")
+    parser.add_argument("--model_output_huggingface_workspace", type=str, default="aczire")
     parser.add_argument("--is_dummy", type=bool, default=False, help="Flag to reduce the dataset size for testing")
     parser.add_argument(
         "--finetuning_type",
